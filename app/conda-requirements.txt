@@ -1,0 +1,4 @@
+bokeh
+flask
+jinja2
+pip
