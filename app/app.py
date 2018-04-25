@@ -22,6 +22,7 @@ from sqlalchemy import create_engine
 from src.transformers import PreprocessTokensTransformer
 
 # constants
+API_KEY = os.getenv('API_KEY', '_')
 PSQL_PATH = 'postgresql+psycopg2://{}:{}@{}/{}'.format(os.environ['DB_USER'],
                                                        os.environ['DB_PW'],
                                                        os.environ['DB_URI'],
@@ -161,11 +162,13 @@ def return_topbot_words(indices, scores, tokenized_text, k=5):
 def index():
     """main model API"""
     stime = time.time()
+    if request.args.get('api_key') != API_KEY:
+        return 'API key missing or wrong', 403
     if ('abstract' in request.form) and ('n_topics' in request.form):
         abstract = request.form['abstract']
         n_topics = int(request.form['n_topics'])
     else:
-        return {'status_code': 403}
+        return 'Abstract missing from form', 403
     tokenized_text = preprocess(abstract)
 
     ids, documents, topic_indices, topic_dist = get_similar_documents(tokenized_text,

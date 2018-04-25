@@ -10,6 +10,6 @@ WORKDIR /opt/app
 
 RUN conda install --yes --file /tmp/conda-requirements.txt
 
-RUN python -c "import nltk; nltk.download('stopwords');"
+RUN python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt');"
 
-CMD gunicorn --bind 0.0.0.0:5000 wsgi
+CMD gunicorn --bind 0.0.0.0:$PORT wsgi
