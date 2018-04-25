@@ -1,0 +1,185 @@
+{% extends "layout.html" %}
+
+{% block title %}Abstract Reviewer{% endblock %}
+
+{% block header %}
+{{ super() }}
+{% if landing_page is defined %}
+<link href="{{url_for('static', filename='css/landing_page.css')}}?ver=0.1" rel="stylesheet" type="text/css">
+{% endif %}
+{% if plot_script is defined %}
+<link href="https://cdn.pydata.org/bokeh/release/bokeh-0.12.15.min.css" rel="stylesheet" type="text/css">
+{% endif %}
+{% endblock %}
+
+{% block top %}
+{% if landing_page is defined %}
+<header class="masthead d-flex">
+  <div class="container text-center my-auto">
+    <h1 class="mb-1">Nervous about submitting your grant?</h1>
+    <h3 class="mb-5">
+      <em>Compare your abstract with previously awarded grants and get recommendations!</em>
+    </h3>
+    <a class="btn btn-primary btn-xl js-scroll-trigger" id="try_button">Enter your abstract</a>
+  </div>
+</header>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+      <div class="row" id="recommender">
+        <div class="col-lg-12 text-left">
+          <form id="abstract_form" method="POST">
+            <div class="form-group">
+              <label for="abstract">Enter abtract:</label>
+              <textarea class="form-control" rows="16" name="abstract" id="abstract" placeholder="Your grant abstract here">{% if query is defined %}{{query}}{% endif %}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </form>
+        </div>
+      </div>
+      {% if error_msg is defined %}
+      <div class="row" id="error_message">
+        <div class="col-lg-12" style="margin-top:30px;">
+          <h3>Sorry, an error occurred... :( Try again later.</h3>
+          <p>{{ error_msg }}</p>
+        </div>
+      </div>
+      {% endif %}
+      {% if topwords is defined or botwords is defined %}
+      {% if topwords is defined and botwords is defined %}
+        {% set lengths = [topwords|length, botwords|length]|sort %}
+        {% set max_length = lengths[-1] %}
+      {% elif topwords is defined %}
+        {% set max_length = topwords|length %}
+      {% else %}
+        {% set max_length = botwords|length %}
+      {% endif %}
+      <div class="row" id="suggestions">
+        <div class="col-lg-12" style="margin-top:30px;">
+          <table class='table'>
+            <thead>
+              <tr>
+                <th colspan="{{max_length}}">
+                  Word suggestions
+                </th>
+                {% if pred_score is defined %}
+                <th>
+                  Pred. RCR: {{ '%0.2f' % pred_score|float }}
+                </th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% if topwords is defined %}
+              <tr>
+                <td class='row_heading'>Higher grant performance</td>
+                {% for word in topwords %}
+                <td>{{ word[0] }} ({{ '%0.2f'|format(word[1]|float) }})</td>
+                {% endfor %}
+              </tr>
+              {% endif %}
+              {% if botwords is defined %}
+              <tr>
+                <td class='row_heading'>Lower grant performance</td>
+                {% for word in botwords %}
+                <td>{{ word[0] }} ({{ '%0.2f'|format(word[1]|float) }})</td>
+                {% endfor %}
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+      {% if plot_div is defined or hist_div is defined %}
+      <div class="row" id="plot">
+        <div class="col-lg-6" id="hist-region" style="margin-top:30px;">
+          {{ hist_div | safe }}
+        </div>
+        <div class="col-lg-6" id="plot-region" style="margin-top:30px;">
+        {{ plot_div | safe }}
+        </div>
+      </div>
+      {% endif %}
+      {% if abstracts is defined %}
+      <div class="row" id="module">
+        <div class="col-lg-12" id="similar_abstracts" style="margin-top:60px;">
+          <table class='table'>
+            <thead>
+              <tr>
+                <th colspan="2">
+                  Similar abstracts
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for abstract in abstracts %}
+              <tr>
+                <td>
+                  <a href="/grants/{{abstract[0]}}">{{abstract[0]}}</a>
+                </td>
+                <td>
+                  <p class="collapse" id="collapseExample-{{abstract[0]}}" aria-expanded="false">
+                    <strong>Title: </strong>{{abstract[1]|safe}}<br>
+                    <strong>Abstract:</strong><br>
+                    {{abstract[2]|safe}}
+                  </p>
+                  <a role="button" id="button-{{abstract[0]}}" class="collapsed" data-toggle="collapse" href="#collapseExample-{{abstract[0]}}" aria-expanded="false" aria-controls="collapseExample-{{abstract[0]}}">
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+      </div>
+    </div>
+{% endblock %}
+
+{% block footer %}
+{{ super() }}
+{% if plot_script is defined or hist_script is defined %}
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-0.12.15.min.js"></script>
+{{ plot_script | safe }}
+{{ hist_script | safe }}
+{% endif %}
+{% if landing_page is defined %}
+<script>
+$(document).ready(function(){
+    $("#try_button").click(function() {
+        $('html, body').animate({
+            scrollTop: $("#recommender").offset().top
+        }, 1000);
+    }); // End if
+});
+</script>
+{% endif %}
+<style>
+    #module {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .row_heading {
+      font-weight: bold;
+    }
+    {% for abstract in abstracts %}
+    #module p#collapseExample-{{abstract[0]}}.collapse[aria-expanded="false"] {
+        display: block;
+        height: 42px !important;
+        overflow: hidden;
+    }
+    #module p#collapseExample-{{abstract[0]}}.collapsing[aria-expanded="false"] {
+        height: 42px !important;
+    }
+    #module a#button-{{abstract[0]}}.collapsed:after  {
+      content: '+ Show More';
+    }
+    #module a#button-{{abstract[0]}}:not(.collapsed):after {
+        content: '- Show Less';
+    }
+    {% endfor %}
+</style>
+{% endblock %}

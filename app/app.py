@@ -15,16 +15,21 @@ API_KEY = os.getenv('API_KEY', '')
 
 app = Flask(__name__) # pylint: disable=C0103
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 def index():
     """index page"""
+    return render_template('index.html')
+
+@app.route('/case', methods=['GET', 'POST'])
+def test_case_page():
+    """index page"""
     if request.method == 'GET':
-        return render_template('index.html', landing_page='true')
+        return render_template('case.html', landing_page='true')
 
     if 'abstract' in request.form:
         abstract = request.form['abstract']
     else:
-        return render_template('index.html',
+        return render_template('case.html',
                                error_msg='There was no abstract!')
 
     try:
@@ -34,16 +39,16 @@ def index():
                           timeout=60)
         data = r.json()
     except Timeout:
-        return render_template('index.html',
+        return render_template('case.html',
                                error_msg='Model API timed out... Try again another time.')
     except: # pylint: disable=W0702
-        return render_template('index.html',
+        return render_template('case.html',
                                error_msg='There is an error with the model API...')
 
     script, div = trend_plot(data['topics'], width=500, height=300)
     script2, div2 = histogram_plot(data['topics'], width=500, height=300)
 
-    return render_template('index.html',
+    return render_template('case.html',
                            query=abstract,
                            abstracts=data['abstracts'],
                            topwords=data['suggestions']['top'],
@@ -62,4 +67,4 @@ def model_page():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000)) # pylint: disable=C0103
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
