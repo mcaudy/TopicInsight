@@ -10,8 +10,8 @@ from flask import Flask, render_template, request
 from src.plots import trend_plot, histogram_plot
 
 # constants
-MODEL_API_URI = os.environ['MODEL_API_URI']
-API_KEY = os.environ['API_KEY']
+MODEL_API_URI = os.getenv('MODEL_API_URI', '')
+API_KEY = os.getenv('API_KEY', '')
 
 app = Flask(__name__) # pylint: disable=C0103
 

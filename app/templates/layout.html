@@ -13,7 +13,7 @@
     {% endblock %}
   </head>
   <body>
-    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
       <div class="container">
         <a class="navbar-brand" href="/">NIH Grant Abstract Reviewer</a>
         <div class="collapse navbar-collapse">
@@ -23,6 +23,9 @@
             </li>
             <li>
               <a class="nav-link" href="/model">Model</a>
+            </li>
+            <li>
+              <a class="nav-link" href="https://adrianyi.com/" target="_blank">Personal Page</a>
             </li>
           </ul>
         </div>
@@ -39,18 +42,12 @@
         Copyright &copy; Adrian Yi 2018
     </div>
 
+    <link rel="stylesheet" href="{{url_for('static', filename='css/css.css')}}">    
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-    <style>
-        .footer {
-            text-align: center;
-            margin: 50px;
-            margin-top: 100px;
-        }
-    </style>
     {% endblock %}
   </body>
 </html>
