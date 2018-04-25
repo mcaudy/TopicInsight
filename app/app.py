@@ -17,16 +17,12 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import LogisticRegression, Ridge
-from sqlalchemy import create_engine
+# from sqlalchemy import create_engine
 
 from src.transformers import PreprocessTokensTransformer
 
 # constants
 API_KEY = os.getenv('API_KEY', '_')
-PSQL_PATH = 'postgresql+psycopg2://{}:{}@{}/{}'.format(os.environ['DB_USER'],
-                                                       os.environ['DB_PW'],
-                                                       os.environ['DB_URI'],
-                                                       os.environ['DB_NAME'])
 MIN_DF = os.getenv('COUNTVECTORIZER_MIN_DF', 7)
 MAX_DF = os.getenv('COUNTVECTORIZER_MAX_DF', 0.6)
 
@@ -36,20 +32,9 @@ app = Flask(__name__) # pylint: disable=C0103
 dictionary = corpora.Dictionary.load('data/lda.dictionary') # pylint: disable=C0103
 lda = LdaModel.load('data/lda.model') # pylint: disable=C0103
 matrix = np.load('data/lda.matrix.npy') # pylint: disable=C0103
+data = pd.read_csv('data/data.csv', index_col='index') # pylint: disable=C0103
 
-engine = create_engine(PSQL_PATH, echo=False) # pylint: disable=C0103
-conn = engine.connect() # pylint: disable=C0103
-
-q = ('SELECT a.index, a.project_number, b.title, b.abstract, b.rcr, c.preprocessed_text ' # pylint: disable=C0103
-     'FROM index2projectnumber a '
-     'LEFT JOIN data b '
-     'ON a.project_number = b.project_number '
-     'LEFT JOIN data_clean c '
-     'ON a.project_number = c.project_number;')
-data = pd.read_sql_query(q, conn, 'index') # pylint: disable=C0103
-
-conn.close()
-
+# TODO: calculate this from matrix, pylint: disable=W0511
 topic_counts = pd.read_csv('data/topic_counts_per_year.csv', index_col='year') # pylint: disable=C0103
 topic_counts.columns = topic_counts.columns.astype(int)
 
@@ -196,4 +181,4 @@ def index():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000)) # pylint: disable=C0103
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)
