@@ -20,9 +20,16 @@ def index():
     """index page"""
     return render_template('index.html')
 
+
+@app.route('/lda', methods=['GET'])
+def lda_page():
+    """model explanation page"""
+    return render_template('lda.html')
+
+
 @app.route('/case', methods=['GET', 'POST'])
 def test_case_page():
-    """index page"""
+    """case page"""
     if request.method == 'GET':
         return render_template('case.html', landing_page='true')
 
@@ -58,11 +65,6 @@ def test_case_page():
                            plot_script=script.strip(),
                            hist_div=div2.strip(),
                            hist_script=script2.strip())
-
-@app.route('/model', methods=['GET'])
-def model_page():
-    """model explanation page"""
-    return render_template('model.html')
 
 
 if __name__ == '__main__':

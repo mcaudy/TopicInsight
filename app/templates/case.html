@@ -1,28 +1,11 @@
 {% extends "layout.html" %}
 
-{% block title %}Abstract Reviewer{% endblock %}
+{% block title %}Topic Insight - Case Study{% endblock %}
 
 {% block header %}
 {{ super() }}
-{% if landing_page is defined %}
-<link href="{{url_for('static', filename='css/landing_page.css')}}?ver=0.1" rel="stylesheet" type="text/css">
-{% endif %}
 {% if plot_script is defined %}
 <link href="https://cdn.pydata.org/bokeh/release/bokeh-0.12.15.min.css" rel="stylesheet" type="text/css">
-{% endif %}
-{% endblock %}
-
-{% block top %}
-{% if landing_page is defined %}
-<header class="masthead d-flex">
-  <div class="container text-center my-auto">
-    <h1 class="mb-1">Nervous about submitting your grant?</h1>
-    <h3 class="mb-5">
-      <em>Compare your abstract with previously awarded grants and get recommendations!</em>
-    </h3>
-    <a class="btn btn-primary btn-xl js-scroll-trigger" id="try_button">Enter your abstract</a>
-  </div>
-</header>
 {% endif %}
 {% endblock %}
 
@@ -145,17 +128,6 @@
 <script src="https://cdn.pydata.org/bokeh/release/bokeh-0.12.15.min.js"></script>
 {{ plot_script | safe }}
 {{ hist_script | safe }}
-{% endif %}
-{% if landing_page is defined %}
-<script>
-$(document).ready(function(){
-    $("#try_button").click(function() {
-        $('html, body').animate({
-            scrollTop: $("#recommender").offset().top
-        }, 1000);
-    }); // End if
-});
-</script>
 {% endif %}
 <style>
     #module {
