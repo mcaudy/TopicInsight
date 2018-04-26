@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block title %}Topic Insight{% endblock %}
+
+{% block header %}
+{{ super() }}
+<link href="{{url_for('static', filename='css/landing_page.css')}}?ver=0.1" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block top %}
+<header class="masthead d-flex">
+  <div class="container text-center my-auto">
+    <h1 class="mb-1">Need to use your unstructured data?</h1>
+    <h3 class="mb-5">
+      <em>What do these reviews say about my product?</em>
+    </h3>
+    <h3 class="mb-5">
+      <em>What are the most popular news article topics?</em>
+    </h3>
+    <h3 class="mb-5">
+      <em>What are my customers calling customer service for?</em>
+    </h3>
+    <h2 class="mb-0">
+      Topic modeling can help you!
+    </h2>
+    <a class="btn btn-primary btn-xl" id="model_button" href="/lda">How does it work?</a>
+  </div>
+</header>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+      <div class="row" id="recommender">
+        <div class="col-lg-12 text-left">
+        </div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block footer %}
+{{ super() }}
+{% endblock %}
