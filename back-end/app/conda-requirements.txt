@@ -1,0 +1,10 @@
+flask
+gensim
+nltk
+numpy
+pandas
+pip
+psycopg2
+scipy
+scikit-learn
+sqlalchemy
