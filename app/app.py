@@ -17,7 +17,6 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import LogisticRegression, Ridge
-# from sqlalchemy import create_engine
 
 from src.transformers import PreprocessTokensTransformer
 
@@ -34,7 +33,7 @@ lda = LdaModel.load('data/lda.model') # pylint: disable=C0103
 matrix = np.load('data/lda.matrix.npy') # pylint: disable=C0103
 data = pd.read_csv('data/data.csv', index_col='index') # pylint: disable=C0103
 
-# TODO: calculate this from matrix, pylint: disable=W0511
+# TODO: calculate this from matrix & data, pylint: disable=W0511
 topic_counts = pd.read_csv('data/topic_counts_per_year.csv', index_col='year') # pylint: disable=C0103
 topic_counts.columns = topic_counts.columns.astype(int)
 
