@@ -3,88 +3,52 @@ Flask app for NIH grant analyzer
 '''
 # pylint: disable=R0914
 import os
-import re
 import time
 
 from flask import Flask, request, jsonify
 from gensim.models import LdaModel
+from gensim.similarities import MatrixSimilarity
 from gensim import corpora
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem.porter import PorterStemmer
-from scipy.stats import entropy
+
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import LogisticRegression, Ridge
 
+from src.text import preprocess
 from src.transformers import PreprocessTokensTransformer
 
 # constants
 API_KEY = os.getenv('API_KEY', '_')
-MIN_DF = os.getenv('COUNTVECTORIZER_MIN_DF', 7)
-MAX_DF = os.getenv('COUNTVECTORIZER_MAX_DF', 0.6)
+MIN_DF = 3
+MAX_DF = 0.6
 
 app = Flask(__name__) # pylint: disable=C0103
 
 # load data
 dictionary = corpora.Dictionary.load('data/lda.dictionary') # pylint: disable=C0103
 lda = LdaModel.load('data/lda.model') # pylint: disable=C0103
-matrix = np.load('data/lda.matrix.npy') # pylint: disable=C0103
-data = pd.read_csv('data/data.csv', index_col='index') # pylint: disable=C0103
-
-# TODO: calculate this from matrix & data, pylint: disable=W0511
-topic_counts = pd.read_csv('data/topic_counts_per_year.csv', index_col='year') # pylint: disable=C0103
+similarities = MatrixSimilarity.load('data/lda.similarity') # pylint: disable=C0103
+data = pd.read_csv('data/data.csv', index_col='index', # pylint: disable=C0103
+                   usecols=['index', 'project_number', 'title', 'abstract', 'rcr', 'preprocessed_text'])
+topic_counts = pd.read_csv('data/lda.topic_counts.csv', index_col='year') # pylint: disable=C0103
 topic_counts.columns = topic_counts.columns.astype(int)
 
-def initial_clean(text):
-    """
-    Function to clean text of HTML tags, websites, email addresess and any punctuation
-    We also lower case the text
-    """
-    text = re.sub(r"<[^>]{1,20}>", " ", text)
-    text = re.sub(r"((\S+)?(http(s)?)(\S+))|((\S+)?(www)(\S+))|((\S+)?(\@)(\S+)?)", " ", text)
-    text = re.sub(r"[^a-zA-Z ]", " ", text)
-    text = text.lower() # lower case the text
-    text = nltk.word_tokenize(text)
-    return text
-
-stop_words = stopwords.words('english') # pylint: disable=C0103
-stop_words += ['applic', 'descript', 'provid', 'unread', 'project', 'propos', 'abstract', # pylint: disable=C0103
-               'goal', 'summari', 'research', 'object', 'term', 'studi', 'investig']
-stemmer = PorterStemmer() # pylint: disable=C0103
-def remove_stopwords_and_stem_words(text):
-    """Function to stem words, so plural and singular are treated the same"""
-    return [stemmer.stem(word) for word in text if word not in stop_words]
-
-def preprocess(text):
-    """Combine initial clean + remove/stem"""
-    return remove_stopwords_and_stem_words(initial_clean(text))
-
-def jensen_shannon(mat1, mat2):
-    """similarity measure for two topics"""
-    p_ = mat1[None, :].T # pylint: disable=C0103
-    q_ = mat2.T # pylint: disable=C0103
-    m = 0.5 * (p_ + q_) # pylint: disable=C0103
-    return np.sqrt(entropy(p_, m) + entropy(q_, m)) # technically 0.5* inside sqrt
-
-def get_most_similar_documents(query, document_matrix, k=10):
+def get_most_similar_documents(query, k=10):
     """Return indices for similar documents"""
     stime = time.time()
-    # sims = jensen_shannon(query, document_matrix)
-    # print('Calculating Jensen-Shannon distance took {:.2f} seconds'.format(time.time()-stime))
-    sims = -np.dot(document_matrix, query)
-    print('Calculating dot product took {:.2f} seconds'.format(time.time()-stime))
+    sims = -similarities[query]
+    print('Calculating similarities took {:.2f} seconds'.format(time.time() - stime))
     return sims.argsort()[:k]
 
 def get_similar_documents(tokens, k=10, n_topics=3):
     """Return the project number, title, abstract for the similar documents"""
     stime = time.time()
-    topic_dist = lda.get_document_topics(bow=dictionary.doc2bow(tokens))
+    topic_dist = lda[dictionary.doc2bow(tokens)]
     bow_matrix = np.array([tup[1] for tup in topic_dist])
     print('Calculating new BoW matrix took {:.2f} seconds'.format(time.time()-stime))
 
-    indices = get_most_similar_documents(bow_matrix, matrix, k)
+    indices = get_most_similar_documents(bow_matrix, k)
     stime = time.time()
     documents = [tuple(data.loc[i, ['project_number', 'title', 'abstract']].values) # pylint: disable=E1101
                  for i in indices]
@@ -103,8 +67,7 @@ def return_topbot_words(indices, scores, tokenized_text, k=5):
                                                                max_df=MAX_DF),
                                                TfidfTransformer())
     stime = time.time()
-    # cleaned_texts = [preprocess(doc[2]) for doc in documents]
-    cleaned_tokens = [row.split() if row else [] for row in data.loc[indices, 'preprocessed_text']] # pylint: disable=E1101
+    cleaned_tokens = [row.split() if isinstance(row,str) else [] for row in data.loc[indices, 'preprocessed_text']] # pylint: disable=E1101
     print('Tokenizing collected documents took {:.2f} seconds'.format(time.time()-stime))
     stime = time.time()
     X = preprocessor.fit_transform(cleaned_tokens) # pylint: disable=C0103
@@ -120,24 +83,27 @@ def return_topbot_words(indices, scores, tokenized_text, k=5):
         indices = [i for i in range(len(scores)) if scores[i] > 0]
         model = Ridge(alpha=1.5).fit(X[indices, :], [np.log10(scores[i]) for i in indices])
         score_pred = 10**model.predict(X_test)[0]
+        coef = model.coef_
         print('Linear regression took {:.2f} seconds'.format(time.time()-stime))
     else:
         score_pred = 0.
+        coef = model.coef_[0]
 
     stime = time.time()
     words = preprocessor.vectorizer.get_feature_names()
     # word_rankings is list of (word, coefficient value) from low to high coef
-    word_rankings = [(words[i], model.coef_[i]) for i in model.coef_.argsort()]
+    word_rankings = [(words[i], coef[i]) for i in coef.argsort()]
 
     topwords = word_rankings[:-k-1:-1]
-    botwords = []
-    for word, coef in word_rankings:
-        if coef >= 0:
-            break
-        if word in tokenized_text:
-            botwords.append((word, coef))
-        if len(botwords) >= k:
-            break
+    botwords = word_rankings[:k:1]
+    # botwords = []
+    # for word, coef in word_rankings:
+    #     if coef >= 0:
+    #         break
+    #     if word in tokenized_text:
+    #         botwords.append((word, coef))
+    #     if len(botwords) >= k:
+    #         break
     print('Collecting processed word recommendations took {:.2f} seconds'.format(time.time()-stime))
     return topwords, botwords, score_pred
 
