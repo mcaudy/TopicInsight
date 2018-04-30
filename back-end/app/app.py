@@ -144,6 +144,39 @@ def index():
     print('Processing entire request took {:.2f} seconds'.format(time.time()-stime))
     return jsonify(result)
 
+@app.route('/topic', methods=['GET'])
+def topic():
+    """Returns topic information"""
+    if request.args.get('api_key') != API_KEY:
+        return 'API key missing or wrong', 403
+
+    N_topics = similarities.index.shape[1]
+    try:
+        topic = int(request.args.get('topic'))
+        n_words = int(request.args.get('n_words'))
+        assert topic>=0 and topic<N_topics
+        n_words = min(max(n_words, 10), 40)
+    except (ValueError, TypeError):
+        return 'Invalid data type. Topic number and n_words must be integers.', 400
+    except AssertionError:
+        return 'Topic number must be between 0 and {}'.format(N_topics-1), 400
+
+    k_abstracts = 20
+    indices = get_most_similar_documents([(topic, 1.) if i==topic else (i, 0.) for i in range(N_topics)],
+                                         k=k_abstracts)
+    documents = [tuple(data.loc[i, ['project_number', 'title', 'abstract']].values) # pylint: disable=E1101
+                 for i in indices]
+
+    topic_data = {'id': int(topic),
+                  'years': list(map(int, topic_counts.index)),
+                  'counts': list(map(int, topic_counts.loc[:, topic])),
+                  'words': [t[0] for t in lda.show_topic(topic, n_words)],
+                  'word_dist': [float(t[1]) for t in lda.show_topic(topic, n_words)],
+                  'n_primary': int((similarities.index.argmax(axis=1)==topic).sum())}
+    result = {'abstracts': documents,
+              'topic': topic_data}
+    return jsonify(result)
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000)) # pylint: disable=C0103
     app.run(host='0.0.0.0', port=port)

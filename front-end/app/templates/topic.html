@@ -1,0 +1,108 @@
+{% extends "layout.html" %}
+
+{% block title %}Topic Insight - Topic {{ topic }}{% endblock %}
+
+{% block header %}
+{{ super() }}
+{% if plot_script is defined %}
+<link href="https://cdn.pydata.org/bokeh/release/bokeh-0.12.15.min.css" rel="stylesheet" type="text/css">
+{% endif %}
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+      {% if error_msg is defined %}
+      <h3>
+        {{ error_msg }}<br>
+        I apologize for the inconvenience. Try again later.
+      </h3>
+      {% endif %}
+      {% if topic is defined and n_primary is defined %}
+      <div class="head">
+        <h1>
+          Topic {{ topic }}
+        </h1>
+        <h4>
+          Number of grants with this topic as primary topic: {{ n_primary }}
+        </h4>
+      </div>
+      {% endif %}
+      {% if plot_div is defined or bar_div is defined %}
+      <div class="row" id="plot">
+        <div class="col-lg-6" id="bar-region" style="margin-top:30px;">
+          {{ bar_div | safe }}
+        </div>
+        <div class="col-lg-6" id="plot-region" style="margin-top:30px;">
+        {{ plot_div | safe }}
+        </div>
+      </div>
+      {% endif %}
+      {% if abstracts is defined %}
+      <div class="row" id="module">
+        <div class="col-lg-12" id="relevant_abstracts" style="margin-top:60px;">
+          <table class='table'>
+            <thead>
+              <tr>
+                <th colspan="2">
+                  Relevant abstracts
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for abstract in abstracts %}
+              <tr>
+                <td>
+                  <a href="/grants/{{abstract[0]}}">{{abstract[0]}}</a>
+                </td>
+                <td>
+                  <p class="collapse" id="collapseExample-{{abstract[0]}}" aria-expanded="false">
+                    <strong>Title: </strong>{{abstract[1]|safe}}<br>
+                    <strong>Abstract:</strong><br>
+                    {{abstract[2]|safe}}
+                  </p>
+                  <a role="button" id="button-{{abstract[0]}}" class="collapsed" data-toggle="collapse" href="#collapseExample-{{abstract[0]}}" aria-expanded="false" aria-controls="collapseExample-{{abstract[0]}}">
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+      </div>
+    </div>
+{% endblock %}
+
+{% block footer %}
+{{ super() }}
+{% if plot_script is defined or hist_script is defined %}
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-0.12.15.min.js"></script>
+{{ plot_script | safe }}
+{{ bar_script | safe }}
+{% endif %}
+<style>
+    #module {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .row_heading {
+      font-weight: bold;
+    }
+    {% for abstract in abstracts %}
+    #module p#collapseExample-{{abstract[0]}}.collapse[aria-expanded="false"] {
+        display: block;
+        height: 42px !important;
+        overflow: hidden;
+    }
+    #module p#collapseExample-{{abstract[0]}}.collapsing[aria-expanded="false"] {
+        height: 42px !important;
+    }
+    #module a#button-{{abstract[0]}}.collapsed:after  {
+      content: '+ Show More';
+    }
+    #module a#button-{{abstract[0]}}:not(.collapsed):after {
+        content: '- Show Less';
+    }
+    {% endfor %}
+</style>
+{% endblock %}

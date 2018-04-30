@@ -2,12 +2,13 @@
 Flask app for NIH grant analyzer
 '''
 import os
+import urllib
 
 import requests
 from requests.exceptions import Timeout
 from flask import Flask, render_template, request
 
-from src.plots import trend_plot, histogram_plot
+from src.plots import trend_plot, histogram_plot, bar_plot
 
 # constants
 MODEL_API_URI = os.getenv('MODEL_API_URI', '')
@@ -66,6 +67,37 @@ def test_case_page():
                            hist_div=div2.strip(),
                            hist_script=script2.strip())
 
+
+@app.route('/topic/<int:topic>')
+def topic(topic):
+    try:
+        r = requests.get(urllib.parse.urljoin(MODEL_API_URI, 'topic'),
+                         params={'api_key': API_KEY,
+                                 'topic': topic,
+                                 'n_words': 30},
+                         timeout=30)
+        assert r.ok
+    except Timeout:
+        return render_template('topic.html',
+                               error_msg='Our server seems to be down right now...')
+    except AssertionError:
+        return render_template('topic.html',
+                               error_msg='There is an issue with our server right now...')
+    except:
+        return render_template('topic.html',
+                               error_msg='There is an issue with our server right now...')
+    data = r.json()
+    script, div = trend_plot([data['topic']], width=500, height=500)
+    script2, div2 = bar_plot(data['topic'], width=500, height=500)
+    
+    return render_template('topic.html',
+                           topic=topic,
+                           n_primary=data['topic']['n_primary'],
+                           abstracts=data['abstracts'],
+                           plot_div=div.strip(),
+                           plot_script=script.strip(),
+                           bar_div=div2.strip(),
+                           bar_script=script2.strip())
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000)) # pylint: disable=C0103
