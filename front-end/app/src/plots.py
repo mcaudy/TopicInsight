@@ -21,8 +21,9 @@ def trend_plot(data, width=600, height=300):
     plot.grid.grid_line_alpha = 0
     plot.xaxis.axis_label = 'Year'
     plot.yaxis.axis_label = '# of grants'
-    plot.xaxis.axis_label_text_font_size = "1em"
-    plot.yaxis.axis_label_text_font_size = "1em"
+    plot.xaxis.axis_label_text_font_size = "1.5em"
+    plot.yaxis.axis_label_text_font_size = "1.5em"
+    plot.xaxis.major_label_text_font_size = "1em"
     return components(plot)
 
 
@@ -48,14 +49,15 @@ def histogram_plot(data, width=600, height=300):
     hover.attachment = 'right'
 
     plot = figure(x_range=topics, width=width, height=height, tools=[hover, 'save'],
-                  title='Top related topics')
+                  title='Relevant topics')
     plot.vbar(x='topics', top='distribution', width=0.8, source=source, line_color='white',
               fill_color=factor_cmap('topics', palette=COLORS, factors=topics))
     plot.y_range.start = 0
     plot.xgrid.grid_line_color = None
-    plot.xaxis.axis_label = 'Related topic numbers'
-    plot.yaxis.axis_label = 'Topic portion'
-    plot.xaxis.axis_label_text_font_size = "1em"
-    plot.yaxis.axis_label_text_font_size = "1em"
+    plot.xaxis.axis_label = 'Topics'
+    plot.yaxis.axis_label = 'Portion'
+    plot.xaxis.axis_label_text_font_size = "1.5em"
+    plot.yaxis.axis_label_text_font_size = "1.5em"
+    plot.xaxis.major_label_text_font_size = "1em"
     plot.toolbar.active_inspect = [hover]
     return components(plot)

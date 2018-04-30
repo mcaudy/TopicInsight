@@ -480,7 +480,8 @@ var LDAvis = function(to_select, data_or_file_name) {
             .attr("x", barguide.width + 5)
             .attr("y", mdsheight + 10 + barguide.height/2)
             .style("dominant-baseline", "middle")
-            .text("Overall term frequency");
+            .text("Overall term frequency")
+            .style("font-size", "1em");
 
         d3.select("#" + barFreqsID).append("rect")
             .attr("x", 0)
@@ -493,7 +494,8 @@ var LDAvis = function(to_select, data_or_file_name) {
             .attr("x", barguide.width/2 + 5)
             .attr("y", mdsheight + 10 + (3/2)*barguide.height + 5)
             .style("dominant-baseline", "middle")
-            .text("Estimated term frequency within the selected topic");
+            .text("Estimated term frequency within the selected topic")
+            .style("font-size", "1em");
 
         // footnotes:
         d3.select("#" + barFreqsID)
@@ -547,6 +549,7 @@ var LDAvis = function(to_select, data_or_file_name) {
             .attr("id", function(d) {
                 return (termID + d.Term);
             })
+            .style("font-size", "1.2em")
             .style("text-anchor", "end") // right align text - use 'middle' for center alignment
             .text(function(d) {
                 return d.Term;
