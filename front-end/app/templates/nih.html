@@ -4,8 +4,8 @@
 
 {% block header %}
 {{ super() }}
-{% if plot_script is defined %}
-<link href="https://cdn.pydata.org/bokeh/release/bokeh-0.12.15.min.css" rel="stylesheet" type="text/css">
+{% if bokeh_version is defined %}
+<link href="https://cdn.pydata.org/bokeh/release/bokeh-{{ bokeh_version }}.min.css" rel="stylesheet" type="text/css">
 {% endif %}
 {% endblock %}
 
@@ -13,10 +13,13 @@
     <div class="container">
       <div class="row" id="recommender">
         <div class="col-lg-12 text-left">
+          <h2>
+            NIH abstract analyzer
+          </h2>
           <form id="abstract_form" method="POST">
             <div class="form-group">
               <label for="abstract">Enter abtract:</label>
-              <textarea class="form-control" rows="16" name="abstract" id="abstract" placeholder="Your grant abstract here">{% if query is defined %}{{query}}{% endif %}</textarea>
+              <textarea class="form-control" rows="6" name="abstract" id="abstract" placeholder="Your grant abstract here">{% if query is defined %}{{query}}{% endif %}</textarea>
             </div>
             <button type="submit" class="btn btn-primary">Submit</button>
           </form>
@@ -30,52 +33,7 @@
         </div>
       </div>
       {% endif %}
-      {% if topwords is defined or botwords is defined %}
-      {% if topwords is defined and botwords is defined %}
-        {% set lengths = [topwords|length, botwords|length]|sort %}
-        {% set max_length = lengths[-1] %}
-      {% elif topwords is defined %}
-        {% set max_length = topwords|length %}
-      {% else %}
-        {% set max_length = botwords|length %}
-      {% endif %}
-      <div class="row" id="suggestions">
-        <div class="col-lg-12" style="margin-top:30px;">
-          <table class='table'>
-            <thead>
-              <tr>
-                <th colspan="{{max_length}}">
-                  Feature (word) importance
-                </th>
-                {% if pred_score is defined %}
-                <th>
-                  Pred. RCR: {{ '%0.2f' % pred_score|float }}
-                </th>
-                {% endif %}
-              </tr>
-            </thead>
-            <tbody>
-              {% if topwords is defined %}
-              <tr>
-                <td class='row_heading'>Higher grant performance</td>
-                {% for word in topwords %}
-                <td>{{ word[0] }} ({{ '%0.2f'|format(word[1]|float) }})</td>
-                {% endfor %}
-              </tr>
-              {% endif %}
-              {% if botwords is defined %}
-              <tr>
-                <td class='row_heading'>Lower grant performance</td>
-                {% for word in botwords %}
-                <td>{{ word[0] }} ({{ '%0.2f'|format(word[1]|float) }})</td>
-                {% endfor %}
-              </tr>
-              {% endif %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      {% endif %}
+
       {% if plot_div is defined or hist_div is defined %}
       <div class="row" id="plot">
         <div class="col-lg-6" id="hist-region" style="margin-top:30px;">
@@ -86,6 +44,7 @@
         </div>
       </div>
       {% endif %}
+
       {% if abstracts is defined %}
       <div class="row" id="module">
         <div class="col-lg-12" id="similar_abstracts" style="margin-top:60px;">
@@ -93,13 +52,19 @@
             <thead>
               <tr>
                 <th colspan="2">
-                  Similar abstracts
+                  <h3>
+                    Similar abstracts
+                  </h3>
                 </th>
               </tr>
             </thead>
             <tbody>
               {% for abstract in abstracts %}
-              <tr>
+              {% if loop.index <= 3 %}
+              <tr class="abstract_visible">
+              {% else %}
+              <tr class="abstract_hidden">
+              {% endif %}
                 <td>
                   <a href="/grants/{{abstract[0]}}">{{abstract[0]}}</a>
                 </td>
@@ -113,30 +78,87 @@
                 </td>
               </tr>
               {% endfor %}
+              <!-- <div class="col-lg-12 text-left" style="margin-top:30px;">
+                <button type="button" class="btn btn-info" id="show_suggestions">
+                  Show important words
+                </button>
+              </div> -->
             </tbody>
           </table>
         </div>
+        <div class="col-lg-12 text-left" id="more_abstracts_div">
+          <button type="button" class="btn btn-info" id="more_abstracts" style="margin:auto; display:block;">
+            Show more abstracts
+          </button>
+        </div>
       </div>
       {% endif %}
+
+      {% if topwords is defined or botwords is defined %}
+      {% if topwords is defined and botwords is defined %}
+        {% set lengths = [topwords|length, botwords|length]|sort %}
+        {% set max_length = lengths[-1] %}
+      {% elif topwords is defined %}
+        {% set max_length = topwords|length %}
+      {% else %}
+        {% set max_length = botwords|length %}
+      {% endif %}
+      <div class="row" id="suggestions_div">
+        <div class="col-lg-12" id="suggestions" style="margin-top:30px;">
+          <h3>
+            Word Correlations (vs citations)
+          </h3>
+          <span style="font-weight: 12px;">
+            <a href="/word_correlations">More about correlations</a>
+          </span>
+          {{ corr_div | safe }}
+        </div>
       </div>
+      {% endif %}
     </div>
 {% endblock %}
 
 {% block footer %}
 {{ super() }}
-{% if plot_script is defined or hist_script is defined %}
-<script src="https://cdn.pydata.org/bokeh/release/bokeh-0.12.15.min.js"></script>
+{% if bokeh_version is defined %}
+<script src="https://cdn.pydata.org/bokeh/release/bokeh-{{ bokeh_version }}.min.js"></script>
 {{ plot_script | safe }}
 {{ hist_script | safe }}
+{{ corr_script | safe }}
+{% endif %}
+{% if abstracts is defined %}
+<script>
+  $('#more_abstracts').click(function() {
+    ah = $('.abstract_hidden')
+    N = ah.length
+    n = Math.min(N, 10)
+    ah.slice(0,n).attr('class', 'abstract_visible');
+    if (N<=10) {
+      $('#more_abstracts_div').remove();
+    };
+  });
+</script>
 {% endif %}
 <style>
+    {% if topwords is defined or botwords is defined %}
+    .row_heading {
+      font-weight: bold;
+    }
+    {% endif %}
+    {% if abstracts is defined %}
     #module {
       font-size: 14px;
       line-height: 1.5;
     }
-    .row_heading {
-      font-weight: bold;
+    .abstract_visible {
+      visibility: visible;
+      position: relative;
     }
+    .abstract_hidden {
+      visibility: hidden;
+      position: absolute;
+    }
+    {% endif %}
     {% for abstract in abstracts %}
     #module p#collapseExample-{{abstract[0]}}.collapse[aria-expanded="false"] {
         display: block;

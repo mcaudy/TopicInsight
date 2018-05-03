@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+
+{% block title %}Topic Insight - 404 Error{% endblock %}
+
+{% block header %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+      <div class="row" id="error_message">
+        <div class="col-lg-12 text-left">
+          <h1>
+            {% if error_msg is defined %}
+            {{ error_msg }}
+            {% else %}
+            This page is not implemented yet...
+            {% endif %}
+          </h1>
+          <h5>
+            I apologize for the inconvenience. If you expected something here, please contact the website admin.
+          </h5>
+        </div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block footer %}
+{{ super() }}
+{% endblock %}

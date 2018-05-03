@@ -15,7 +15,7 @@ header {
     height: 100%;
     padding-top: 8rem;
     padding-bottom: 8rem;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url("/static/images/landing_page.jpg");
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)), url("/static/images/landing_page.jpg");
     background-position: center center;
     background-repeat: no-repeat;
     background-size: cover;

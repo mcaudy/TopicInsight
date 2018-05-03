@@ -13,6 +13,7 @@ from gensim import corpora
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_selection import f_classif, f_regression
 from sklearn.linear_model import LogisticRegression, Ridge
 
 from src.text import preprocess
@@ -67,7 +68,8 @@ def return_topbot_words(indices, scores, tokenized_text, k=5):
                                                                max_df=MAX_DF),
                                                TfidfTransformer())
     stime = time.time()
-    cleaned_tokens = [row.split() if isinstance(row,str) else [] for row in data.loc[indices, 'preprocessed_text']] # pylint: disable=E1101
+    cleaned_tokens = data.loc[indices, 'preprocessed_text'].astype(str).str.split().values
+    # cleaned_tokens = [row.split() if isinstance(row,str) else [] for row in data.loc[indices, 'preprocessed_text']] # pylint: disable=E1101
     print('Tokenizing collected documents took {:.2f} seconds'.format(time.time()-stime))
     stime = time.time()
     X = preprocessor.fit_transform(cleaned_tokens) # pylint: disable=C0103
@@ -75,27 +77,44 @@ def return_topbot_words(indices, scores, tokenized_text, k=5):
 
     stime = time.time()
     X_test = preprocessor.transform([tokenized_text]) # pylint: disable=C0103
-    model = LogisticRegression(C=2.5).fit(X, [int(s > 0) for s in scores])
+    y = scores>0
+    model = LogisticRegression(C=2.5).fit(X, y)
     print('Logistic regression took {:.2f} seconds'.format(time.time()-stime))
 
+    stime = time.time()
     if model.predict(X_test)[0]:
-        stime = time.time()
-        indices = [i for i in range(len(scores)) if scores[i] > 0]
-        model = Ridge(alpha=1.5).fit(X[indices, :], [np.log10(scores[i]) for i in indices])
-        score_pred = 10**model.predict(X_test)[0]
-        coef = model.coef_
-        print('Linear regression took {:.2f} seconds'.format(time.time()-stime))
+        indices = np.where(scores)[0]
+        # indices = [i for i in range(len(scores)) if scores[i] > 0]
+        y = np.log10(scores[indices])
+        # model = Ridge(alpha=5).fit(X[indices, :], y)
+        # score_pred = 10**model.predict(X_test)[0]
+        # coef = model.coef_
+        corr = np.corrcoef(X[indices, :].toarray(), y, rowvar=False)[-1,:-1]
+        _, pval = f_regression(X[indices, :], y)
     else:
-        score_pred = 0.
-        coef = model.coef_[0]
+        # score_pred = 0.
+        # corr = model.coef_[0]
+        corr = np.corrcoef(X.toarray(), y, rowvar=False)[-1,:-1]
+        _, pval = f_classif(X, y)
+    print('Calculating corr & pval took {:.2f} seconds'.format(time.time()-stime))
 
     stime = time.time()
     words = preprocessor.vectorizer.get_feature_names()
-    # word_rankings is list of (word, coefficient value) from low to high coef
-    word_rankings = [(words[i], coef[i]) for i in coef.argsort()]
+    word_indices = corr.argsort()
 
-    topwords = word_rankings[:-k-1:-1]
-    botwords = word_rankings[:k:1]
+    topwords, botwords = [], []
+    for i in word_indices[::-1]:
+        if len(topwords) >= k or corr[i] <= 0.:
+            break
+        if pval[i] < 0.05:
+            topwords.append((words[i], corr[i]))
+    for i in word_indices:
+        if len(botwords) >= k or corr[i] >= 0.:
+            break
+        if pval[i] < 0.05:
+            botwords.append((words[i], corr[i]))
+    # topwords = word_rankings[:-k-1:-1]
+    # botwords = word_rankings[:k:1]
     # botwords = []
     # for word, coef in word_rankings:
     #     if coef >= 0:
@@ -105,7 +124,7 @@ def return_topbot_words(indices, scores, tokenized_text, k=5):
     #     if len(botwords) >= k:
     #         break
     print('Collecting processed word recommendations took {:.2f} seconds'.format(time.time()-stime))
-    return topwords, botwords, score_pred
+    return topwords, botwords
 
 
 @app.route('/', methods=['POST'])
@@ -114,11 +133,13 @@ def index():
     stime = time.time()
     if request.args.get('api_key') != API_KEY:
         return 'API key missing or wrong', 403
-    if ('abstract' in request.form) and ('n_topics' in request.form):
+    if 'abstract' in request.form:
         abstract = request.form['abstract']
-        n_topics = int(request.form['n_topics'])
     else:
         return 'Abstract missing from form', 403
+    n_topics = request.args.get('n_topics', 3, int)
+    n_words = request.args.get('n_words', 5, int)
+    n_abstracts = request.args.get('n_abstracts', 10, int)
     tokenized_text = preprocess(abstract)
 
     ids, documents, topic_indices, topic_dist = get_similar_documents(tokenized_text,
@@ -133,13 +154,12 @@ def index():
                     'dist': float(topic_dist[i]),
                     'words': words[i]} for i, tid in enumerate(topic_indices)]
 
-    scores = list(data.loc[ids, 'rcr']) # pylint: disable=E1101
-    topwords, botwords, pred = return_topbot_words(ids, scores, tokenized_text, k=5)
+    scores = data.loc[ids, 'rcr'].values # pylint: disable=E1101
+    topwords, botwords = return_topbot_words(ids, scores, tokenized_text, k=n_words)
 
-    result = {'abstracts': documents[:10],
+    result = {'abstracts': documents[:n_abstracts],
               'suggestions': {'top': topwords, 'bot': botwords},
-              'topics': topics_data,
-              'predicted_score': pred}
+              'topics': topics_data}
 
     print('Processing entire request took {:.2f} seconds'.format(time.time()-stime))
     return jsonify(result)

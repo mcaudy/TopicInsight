@@ -60,7 +60,7 @@ def histogram_plot(data, width=600, height=300):
     plot.y_range.start = 0
     plot.xgrid.grid_line_color = None
     plot.xaxis.axis_label = 'Topics'
-    plot.yaxis.axis_label = 'Portion'
+    plot.yaxis.axis_label = 'Proportion'
     plot.title.text_font_size = '1.5em'
     plot.xaxis.axis_label_text_font_size = "1.5em"
     plot.yaxis.axis_label_text_font_size = "1.5em"
@@ -89,5 +89,31 @@ def bar_plot(data, width=600, height=300):
     plot.xaxis.axis_label_text_font_size = "1.5em"
     plot.yaxis.axis_label_text_font_size = "1.5em"
     plot.xaxis.major_label_text_font_size = "1em"
+
+    return components(plot)
+
+def corr_plot(data, width=600, height=300):
+    '''
+    '''
+    words, corr = zip(*data['bot'] + data['top'][::-1])
+    colors = ['#1F77B4' if c > 0 else '#D62728' for c in corr]
+    plot = figure(y_range=words, plot_width=width, plot_height=height,
+                  title=None, toolbar_location=None, tools="")
+
+    max_abs = max(map(abs, corr))
+    plot.hbar(y=words, right=corr, height=0.8,
+              color=colors, alpha=[0.5+0.5*abs(c/max_abs) for c in corr])
+
+    plot.ygrid.grid_line_color = None
+    plot.x_range.start = -1.1*max_abs
+    plot.x_range.end = 1.1*max_abs
+
+    # plot.title.text_font_size = '1.5em'
+    plot.xaxis.axis_label = 'Correlation coefficient'
+    plot.yaxis.axis_label = 'Words'
+    plot.xaxis.axis_label_text_font_size = "1.5em"
+    plot.yaxis.axis_label_text_font_size = "1.5em"
+    plot.xaxis.major_label_text_font_size = "1em"
+    plot.yaxis.major_label_text_font_size = "1em"
 
     return components(plot)
